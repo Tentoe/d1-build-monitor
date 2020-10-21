@@ -2,11 +2,43 @@
 #include <string>
 #include "pitches.h"
 
-// notes in the melody:
-int melody[] = {659, 622, 659, 622, 659, 494, 587, 523, 440, 262, 330, 440, 494, 330, 415, 494, 523, 330, 659, 622, 659, 622, 659, 494, 587, 523, 440, 262, 330, 440, 494, 330, 523, 494, 440 };
+const int BUZZER_PIN = D5;
 
-// note durations: 4 = quarter note, 8 = eighth note, etc.:
-int noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4};
+std::vector<std::vector<int>> axel = {
+    {329, 500},
+    {391, 375},
+    {329, 250},
+    {329, 125},
+    {440, 250},
+    {329, 250},
+    {293, 250},
+    {329, 500},
+    {493, 375},
+    {329, 250},
+    {329, 125},
+    {523, 250},
+    {493, 250},
+    {391, 250},
+    {329, 250},
+    {493, 250},
+    {659, 250},
+    {329, 125},
+    {293, 250},
+    {293, 125},
+    {246, 250},
+    {369, 250},
+    {329, 250}};
+
+void playSong(std::vector<std::vector<int>>  song)
+{
+  for (unsigned int note = 0; note < song.size(); note++)
+  {
+    int noteDuration = song[note][1];
+    tone(BUZZER_PIN, song[note][0], noteDuration);
+    delay(noteDuration);
+    noTone(BUZZER_PIN);
+  }
+}
 
 void setup()
 {
@@ -21,28 +53,5 @@ void loop()
   Serial.println(String(count));
   count++;
   delay(1000);
-
-  for (int thisNote = 0;thisNote < (sizeof(melody) / sizeof(melody[0])); thisNote++)
-  {
-
-    // to calculate the note duration, take one second divided by the note type.
-
-    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-
-    int noteDuration = noteDurations[thisNote];
-
-    tone(D5, melody[thisNote], 120);
-
-    // to distinguish the notes, set a minimum time between them.
-
-    // the note's duration + 30% seems to work well:
-
-    int pauseBetweenNotes = noteDuration * 1.30;
-
-    delay(120);
-
-    // stop the tone playing:
-
-    noTone(8);
-  }
+  playSong(axel);
 }
