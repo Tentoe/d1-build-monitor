@@ -1,5 +1,7 @@
 import xml.etree.ElementTree as ET
-root = ET.parse('BeverlyHillsCopAxel.musicxml').getroot()
+import sys
+
+root = ET.parse(sys.argv[1]).getroot()
 
 
 def getFrequency(note):
@@ -22,7 +24,7 @@ def getFrequency(note):
 
 noteLength = {
     "full": 1.0,
-    "halve": 0.5,
+    "half": 0.5,
     "quarter": 0.25,
     "eighth": 0.125,
     "16th": 0.0625,
@@ -47,14 +49,18 @@ for part in root.findall('part'):
         for note in measure.findall('note'):
             pitch = note.find('pitch')
 
-            noteString = pitch.find('step').text+pitch.find('octave').text
             noteDuration = fullTime * noteLength[note.find('type').text]
-            
+
             if note.find('dot') is not None:
                 noteDuration = noteDuration + noteDuration / 2
             accidental = getattr(note.find('accidental'), "text", None)
-            if accidental == 'sharp':
-                noteString = pitch.find('step').text+'#'+pitch.find('octave').text
 
-            print('{' + str(getFrequency(noteString)) + ', ' +
-                  str(int(noteDuration))+'},')
+            if note.find('rest') is not None:
+                print('{0, ' + str(int(noteDuration))+'},')
+            else:
+                noteString = pitch.find('step').text+pitch.find('octave').text
+                if accidental == 'sharp':
+                    noteString = pitch.find(
+                        'step').text+'#'+pitch.find('octave').text
+                print('{' + str(getFrequency(noteString)) +
+                      ', ' + str(int(noteDuration))+'},')
