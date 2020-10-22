@@ -1,6 +1,8 @@
 import xml.etree.ElementTree as ET
 import sys
 
+
+
 root = ET.parse(sys.argv[1]).getroot()
 
 
@@ -22,19 +24,25 @@ def getFrequency(note):
     return int(440 * (2 ** ((keyNumber - 49) / 12)))
 
 
+
 noteLength = {
     "full": 1.0,
-    "half": 0.5,
-    "quarter": 0.25,
-    "eighth": 0.125,
-    "16th": 0.0625,
-    "32th": 0.03125,
+    "half": 1/2,
+    "quarter": 1/4,
+    "eighth": 1/8,
+    "16th": 1/16,
+    "32nd": 1/32,
+    "64th": 1/64
 }
 
 
 for part in root.findall('part'):
     print(part.attrib['id'])
-    bpm = int(part.find('.//per-minute').text)
+    perMinute = part.find('.//per-minute')
+    bpm = 120
+    if perMinute is not None:
+        bpm = int(part.find('.//per-minute').text)
+    
     print(bpm, "bpm")
 
     time = part.find('.//time')
@@ -44,23 +52,54 @@ for part in root.findall('part'):
     fullTime = 1 / (bpm / beatType / 60) * 1000  # in ms
 
     print(beats, beatType, fullTime)
+    
 
+    def getDuration(note):
+        try:
+            if note.find('rest').attrib['measure'] == 'yes':
+                return beats * fullTime
+        except:
+            pass
+
+        noteDuration = fullTime * noteLength[note.find('type').text]
+        if note.find('dot') is not None:
+            return noteDuration + noteDuration / 2
+        return noteDuration
+
+
+    tieTime = 0
+    
     for measure in part.findall('measure'):
         for note in measure.findall('note'):
+
+            noteDuration = int(getDuration(note))
+
+            tie = note.findall('tie')
+
+            if len(tie) > 0 :
+                if len(tie) == 1:
+                    if tie[0].attrib['type'] == 'start':
+                        tieTime = noteDuration
+                        continue
+                    if tie[0].attrib['type'] == 'stop':
+                        noteDuration = noteDuration + tieTime
+                else:
+                    tieTime = tieTime + noteDuration
+                    continue
+
+
             pitch = note.find('pitch')
 
-            noteDuration = fullTime * noteLength[note.find('type').text]
+            
 
-            if note.find('dot') is not None:
-                noteDuration = noteDuration + noteDuration / 2
             accidental = getattr(note.find('accidental'), "text", None)
 
             if note.find('rest') is not None:
-                print('{0, ' + str(int(noteDuration))+'},')
+                print('{0, ' + str(noteDuration)+'},')
             else:
                 noteString = pitch.find('step').text+pitch.find('octave').text
                 if accidental == 'sharp':
                     noteString = pitch.find(
                         'step').text+'#'+pitch.find('octave').text
                 print('{' + str(getFrequency(noteString)) +
-                      ', ' + str(int(noteDuration))+'},')
+                      ', ' + str(noteDuration)+'},')
