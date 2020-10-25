@@ -5,64 +5,42 @@ import sys
 root = ET.parse(sys.argv[1]).getroot()
 
 
-def getFrequency(note):
-    notes = {'A': 0, 'A#': 1, 'B': 2, 'C': 3, 'C#': 4, 'D': 5,
-             'D#': 6, 'E': 7, 'F': 8, 'E#': 8, 'F#': 9, 'G': 10, 'G#': 11}
+def getFrequency(step, octave, alter):
 
-    if len(note) == 3:
-        octave = int(note[2])
-    else:
-        octave = int(note[1])
+    a4 = 440  # referencal note a4
+    a = 2**(1/12)
 
-    keyNumber = notes[note[:len(note)-1]]
+    octaveSemitones = 12
 
-    if keyNumber < 3:
-        keyNumber = keyNumber + 12 + ((octave - 1) * 12) + 1
-    else:
-        keyNumber = keyNumber + ((octave - 1) * 12) + 1
+    notes = {'C': 0,  'D': 2, 'E': 4,  'F': 5,  'G': 7, 'A': 9, 'B': 11}
 
-    return int(440 * (2 ** ((keyNumber - 49) / 12)))
+    diff = (notes[step] + int(octave) * octaveSemitones) - \
+        (notes['A'] + 4 * octaveSemitones)
 
+    if alter is not None:
+        diff += int(alter)
 
-noteLength = {
-    "whole": 1.0,
-    "half": 1/2,
-    "quarter": 1/4,
-    "eighth": 1/8,
-    "16th": 1/16,
-    "32nd": 1/32,
-    "64th": 1/64
-}
+    return a4 * a ** diff
 
 
 for part in root.findall('part'):
     print(part.attrib['id'])
-    perMinute = part.find('.//per-minute')
     bpm = 120
-    if perMinute is not None:
-        bpm = int(part.find('.//per-minute').text)
+    sound = part.find('.//sound')
+
+    if sound is not None:
+        bpm = int(sound.attrib['tempo'])
 
     print(bpm, "bpm")
 
-    time = part.find('.//time')
-    beats = int(time.find('beats').text)
-    beatType = int(time.find('beat-type').text)
+    beatTime = 1 / (bpm/60/1000)
+    print(beatTime, "beatTime")
 
-    fullTime = 1 / (bpm / beatType / 60) * 1000  # in ms
-
-    print(beats, beatType, fullTime)
+    durationTime = beatTime / int(part.find('.//divisions').text)
+    print(durationTime, "durationTime")
 
     def getDuration(note):
-        try:
-            if note.find('rest').attrib['measure'] == 'yes':
-                return beats * fullTime
-        except:
-            pass
-
-        noteDuration = fullTime * noteLength[note.find('type').text]
-        if note.find('dot') is not None:
-            return noteDuration + noteDuration / 2
-        return noteDuration
+        return int(note.find('duration').text) * durationTime
 
     tieTime = 0
 
@@ -85,15 +63,13 @@ for part in root.findall('part'):
                     continue
 
             pitch = note.find('pitch')
-
-            accidental = getattr(note.find('accidental'), "text", None)
-
             if note.find('rest') is not None:
                 print('{0, ' + str(noteDuration)+'},', end='')
             else:
-                noteString = pitch.find('step').text+pitch.find('octave').text
-                if accidental == 'sharp':
-                    noteString = pitch.find(
-                        'step').text+'#'+pitch.find('octave').text
-                print('{' + str(getFrequency(noteString)) +
-                      ', ' + str(noteDuration)+'},', end='')
+
+                step = getattr(pitch.find('step'), "text", None)
+                octave = getattr(pitch.find('octave'), "text", None)
+                alter = getattr(pitch.find('alter'), "text", None)
+
+                print('{' + str(round(getFrequency(step, octave, alter))
+                                ) + ', ' + str(noteDuration)+'},', end='')
